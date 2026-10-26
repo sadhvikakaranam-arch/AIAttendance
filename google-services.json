@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "119278486807",
+    "project_id": "dhanvika-58357",
+    "storage_bucket": "dhanvika-58357.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:119278486807:android:a3f0e80253d1ba5a5fa352",
+        "android_client_info": {
+          "package_name": "com.dhanvika.geocam"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "119278486807-0co1jb66sbgorsl1o7odru8t2hdnitue.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXW6lI8xwzNFos8ezAcxcxpNYsc8aphek"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "119278486807-0co1jb66sbgorsl1o7odru8t2hdnitue.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
