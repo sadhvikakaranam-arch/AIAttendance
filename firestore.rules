@@ -1,27 +1,101 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function signedInAs(userId) {
+      return request.auth != null
+        && request.auth.uid == userId;
+    }
+
+    function validLocation(location) {
+      return location is map
+        && location.latitude is number
+        && location.latitude >= -90
+        && location.latitude <= 90
+        && location.longitude is number
+        && location.longitude >= -180
+        && location.longitude <= 180
+        && (
+          location.accuracy == null
+          || location.accuracy is number
+        );
+    }
+
     match /users/{userId} {
-      allow create: if request.auth != null
-        && request.auth.uid == userId
+      allow create: if signedInAs(userId)
         && request.resource.data.uid == userId
         && request.resource.data.email == request.auth.token.email;
-      allow read, update, delete: if request.auth != null
-        && request.auth.uid == userId;
+
+      allow read: if signedInAs(userId);
+
+      // Only permit ordinary profile edits.
+      // Privileged fields cannot be added or modified here.
+      allow update: if signedInAs(userId)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['fullName', 'phoneNumber', 'updatedAt']);
+
+      allow delete: if false;
 
       match /attendance/{attendanceId} {
-        allow read: if request.auth != null && request.auth.uid == userId;
-        allow create, update: if request.auth != null
-          && request.auth.uid == userId
+        allow read: if signedInAs(userId);
+
+        // A new daily record must begin with check-in.
+        allow create: if signedInAs(userId)
+          && request.resource.data.keys().hasOnly([
+            'uid',
+            'dateKey',
+            'checkInAt',
+            'checkInLocation',
+            'checkOutAt',
+            'checkOutLocation',
+            'workedMinutes',
+            'updatedAt'
+          ])
           && request.resource.data.uid == userId
-          && request.resource.data.dateKey == attendanceId;
-      }
+          && request.resource.data.dateKey == attendanceId
+          && request.resource.data.checkInAt == request.time
+          && request.resource.data.checkOutAt == null
+          && request.resource.data.checkOutLocation == null
+          && request.resource.data.workedMinutes == null
+          && request.resource.data.updatedAt == request.time
+          && validLocation(
+            request.resource.data.checkInLocation
+          );
 
-      match /attendance/{attendanceId} {
-        allow read, create, update, delete: if request.auth != null
-          && request.auth.uid == userId
-          && request.resource.data.uid == userId;
+        // An existing daily record can only be checked out once.
+        allow update: if signedInAs(userId)
+          && resource.data.uid == userId
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.dateKey == resource.data.dateKey
+          && resource.data.dateKey == attendanceId
+          && resource.data.checkOutAt == null
+          && request.resource.data.checkInAt == resource.data.checkInAt
+          && request.resource.data.checkInLocation == resource.data.checkInLocation
+          && request.resource.data.checkOutAt == request.time
+          && request.resource.data.workedMinutes is int
+          && request.resource.data.workedMinutes >= 0
+          && request.resource.data.updatedAt == request.time
+          && validLocation(
+            request.resource.data.checkOutLocation
+          )
+          && request.resource.data.diff(resource.data)
+            .affectedKeys()
+            .hasOnly([
+              'checkOutAt',
+              'checkOutLocation',
+              'workedMinutes',
+              'updatedAt'
+            ]);
+
+        allow delete: if false;
       }
     }
+
+    // Admin-managed timetable and class-attendance rules
+    // will be added after the admin identity and data model
+    // are established securely.
   }
 }
